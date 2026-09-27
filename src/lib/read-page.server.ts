@@ -8,8 +8,10 @@ const UA =
 
 export type PageFacts = ExtractedPage & { finalUrl: string };
 
-function fail(message: string): never {
-  throw new Error(message);
+function fail(message: string, siteStatus?: number): never {
+  const error = new Error(message);
+  if (siteStatus) (error as Error & { siteStatus?: number }).siteStatus = siteStatus;
+  throw error;
 }
 
 function isBlockedIp(ip: string): boolean {
@@ -151,12 +153,18 @@ async function fetchPublic(
       current = await assertPublicHttpUrl(new URL(location, current).href);
       continue;
     }
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 403) {
+      await response.body?.cancel();
+      const host = current.hostname.replace(/^www\./, "");
       fail(
-        `The site refused the reader (${response.status}). It is behind a login or a bot wall, so the tags never arrived.`,
+        `${host} returned 403. Their host blocked the reader — usually Cloudflare, or a page that requires a login — so the tags never arrived.`,
+        403,
       );
     }
-    if (!response.ok) fail(`The page responded ${response.status}.`);
+    if (!response.ok) {
+      await response.body?.cancel();
+      fail(`The page responded ${response.status}.`);
+    }
     const body = await readBody(response, opts.maxBytes);
     return {
       finalUrl: current.href,

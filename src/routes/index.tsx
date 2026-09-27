@@ -25,7 +25,7 @@ function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [tone, setTone] = useState<"ok" | "bad">("ok");
+  const [tone, setTone] = useState<"ok" | "bad" | "warn">("ok");
   const [probe, setProbe] = useState<ImageProbe>({ state: "none" });
 
   useEffect(() => {
@@ -98,7 +98,7 @@ function Home() {
     try {
       const result = await analyzeUrl({ data: { url } });
       if (!result.ok) {
-        setTone("bad");
+        setTone(result.siteStatus === 403 ? "warn" : "bad");
         setMessage(result.error);
         return;
       }
@@ -177,7 +177,11 @@ function Home() {
           </div>
         </form>
         {message ? (
-          <p className={tone === "bad" ? "banner" : "quiet"} role="status">
+          <p
+            className={tone === "ok" ? "quiet" : tone === "warn" ? "banner banner-warn" : "banner"}
+            role="status"
+          >
+            {tone === "warn" ? <span className="banner-kicker">Not a bug in this app</span> : null}
             {message}
           </p>
         ) : null}

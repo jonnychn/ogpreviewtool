@@ -4,7 +4,7 @@ import type { ExtractedPage } from "./extract-meta";
 
 export type AnalyzeResult =
   | { ok: true; page: ExtractedPage & { finalUrl: string } }
-  | { ok: false; error: string };
+  | { ok: false; error: string; siteStatus?: number };
 
 export const analyzeUrl = createServerFn({ method: "POST" })
   .validator((data: unknown) => {
@@ -26,9 +26,15 @@ export const analyzeUrl = createServerFn({ method: "POST" })
       const page = await readPage(data.url);
       return { ok: true, page };
     } catch (error) {
+      const siteStatus =
+        typeof error === "object" && error !== null && "siteStatus" in error &&
+        typeof error.siteStatus === "number"
+          ? error.siteStatus
+          : undefined;
       return {
         ok: false,
         error: error instanceof Error ? error.message : "Could not read that page.",
+        ...(siteStatus ? { siteStatus } : {}),
       };
     }
   });
