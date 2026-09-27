@@ -4,7 +4,7 @@ import { isIP } from "node:net";
 import { extractMeta, type ExtractedPage } from "./extract-meta";
 
 const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (compatible; ogpreviewtool/1.0; +https://ogpreviewtool.vercel.app) facebookexternalhit/1.1";
 
 export type PageFacts = ExtractedPage & { finalUrl: string };
 
@@ -150,6 +150,11 @@ async function fetchPublic(
       if (!location) fail("The page redirected without a destination.");
       current = await assertPublicHttpUrl(new URL(location, current).href);
       continue;
+    }
+    if (response.status === 401 || response.status === 403) {
+      fail(
+        `The site refused the reader (${response.status}). It is behind a login or a bot wall, so the tags never arrived.`,
+      );
     }
     if (!response.ok) fail(`The page responded ${response.status}.`);
     const body = await readBody(response, opts.maxBytes);
